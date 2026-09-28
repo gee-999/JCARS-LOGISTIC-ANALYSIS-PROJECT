@@ -2,54 +2,54 @@
 
 ## 1. Project Background & Objective
 
-JCars Logistics imports, sells and delivers vehicles to customers across Kenya. Management supplied a single raw, uncleaned transactional export (Jcars_data.csv) covering sales, customers, vehicles, branches, sales representatives, payments, deliveries, logistics costs, returns, cancellations and customer experience and asked for a reliable, interactive Power BI solution that turns that data into management decision support: understanding sales and revenue performance, cost and profitability, vehicle and branch performance, sales channels, payments, logistics, returns and unusual transactions that deserve further investigation.
+JCars Logistics imports, sells and delivers vehicles to customers across Kenya. Management provided a single raw, uncleaned transactional export (`Jcars_data.csv`) covering sales, customers, vehicles, branches, sales representatives, payments, deliveries, logistics costs, returns, cancellations and customer experience. The goal was to build a reliable and interactive Power BI solution that could turn this data into useful management insights around sales and revenue performance, costs and profitability, vehicle and branch performance, sales channels, payments, logistics, returns and unusual transactions that may need further investigation.
 
-This repository documents that end-to-end journey:
-1.  Data quality audit.
-2.  Currency standardization.
-3.  Power Query cleaning.
-4.  Data modelling.
-5.  DAX.
-6.  Dashboard and report design.
-7.  Investigation and recommendations.
+This repository documents the full process:
+
+1. Data quality audit
+2. Currency standardization
+3. Power Query cleaning
+4. Data modelling
+5. DAX
+6. Dashboard and report design
+7. Investigation and recommendations
 
 ## 2. Dataset & Grain
 
-1.  Source file: Jcars_data.csv is a single flat table with 32 columns.
-2.  Grain: one row contains one vehicle sales order line, a single order for one or more units of one vehicle 
-    configuration, sold by one sales rep, to one customer, through one branch.
-3.	Row count: 276 order lines, representing 466 total units sold.
-4.	Date coverage: Order Date spans 1 Jan 2025 – 1 Dec 2026.
-5.	Business entities represented in the columns: customer (name, type, age), location (region, county, city), branch, sales     rep, lead source/channel, vehicle (make, model, type, year, fuel, transmission, color), transaction economics(units,price, cost, discount, delivery fee, revenue recorded), payment (method, status), logistics (delivery status, delivery date, logistics cost), and customer experience (rating, review count, returned flag).
-   
+1. **Source file:** `Jcars_data.csv` is a single flat table with 32 columns.
+2. **Grain:** Each row represents one vehicle sales order line: a single order for one or more units of one vehicle configuration, sold by one sales rep to one customer through one branch.
+3. **Row count:** 276 order lines, representing 466 total units sold.
+4. **Date coverage:** Order Date spans 1 Jan 2025 – 1 Dec 2026.
+5. **Business entities represented in the columns:** customer (name, type, age), location (region, county, city), branch, sales rep, lead source/channel, vehicle (make, model, type, year, fuel, transmission, color), transaction economics (units, price, cost, discount, delivery fee, revenue recorded), payment (method, status), logistics (delivery status, delivery date, logistics cost), and customer experience (rating, review count, returned flag).
+
 ## 3. Data Quality Audit
-                                          
-### Below are the significant issues identified, why each mattered, and how each was resolved in Power Query.
+
+### Below are the significant issues identified, why each mattered, and how each was handled in Power Query.
 
 ## Data Cleaning Issues and How They Were Handled
 
-| # | Issue Found | Why It Was a Problem | How It Was Handled |
-|---|---|---|---|
-| 1 | Inconsistent or misspelled categories such as `totoya`, `toyta`, `Mercedes Benz`, `cental`, `nrb`, and `harier` | The same category could appear as different values, affecting totals and charts. | Created mapping tables to standardize known variations into one consistent label. |
-| 2 | Multiple currencies such as KES, KSh, USD, EUR, ZAR, and R | Different currencies could not be safely added together. | Detected the currency and converted all monetary values to KES using consistent exchange rates. |
-| 3 | Monetary values ending in `M` | Values such as `5M` could be interpreted as 5 instead of 5,000,000. | Detected `M` and converted the value to millions before currency conversion. |
-| 4 | Missing-value and error placeholders such as `N/A`, `NULL`, `TBD`, `-`, and `#VALUE!` | These values could cause errors or affect calculations. | Converted recognized placeholders to true null values before changing data types. |
-| 5 | Inconsistent date formats and Excel serial dates | Incorrect dates could place transactions in the wrong time period. | Converted different date formats and Excel serial dates into a consistent date format. |
-| 6 | Inconsistent Order ID formats | Different formats could make it difficult to identify or remove duplicates. | Standardized Order IDs while preserving their original prefixes and numeric parts. |
-| 7 | Units Sold recorded as words such as `one`, `two`, and `three` | Text values could not be included correctly in calculations. | Converted number words into numeric values. |
-| 8 | Discounts recorded as words, decimals, and percentages | Mixed formats could produce incorrect calculations. | Converted all valid discounts into decimal values. Values above 50% were treated as invalid. |
-| 9 | Customer Ratings recorded as `excellent`, `4/5`, and `3 out of 5` | Different formats made it difficult to calculate average ratings. | Standardized ratings to a 0–5 numeric scale. Invalid values were removed. |
-| 10 | Review Count recorded partly as words | Text values could not be used correctly in calculations. | Converted number words into numeric values. |
-| 11 | Customer Age below 18 or above 100 | These values were considered implausible and likely to be data-entry errors. | Invalid ages were converted to null and handled using a documented default. |
-| 12 | Sales Rep names containing typing errors | The same sales representative could appear as different people. | Corrected the known character error before matching names. |
-| 13 | Zero Logistics Cost for Delivered orders | A completed delivery with zero logistics cost could understate delivery expenses. | Flagged these values as suspicious and converted them to null. |
-| 14 | Zero Revenue for active, non-cancelled orders | This could incorrectly reduce reported revenue. | Flagged suspicious values and recalculated revenue independently. |
-| 15 | Duplicate Lead Source spellings such as `Face Book` and `Facebook` | The same marketing channel could appear as two separate categories. | Standardized the variations into one canonical label. |
-| 16 | Recorded Revenue could not be fully verified | The original revenue field could contain unreliable values. | Recalculated revenue using Units Sold × Unit Selling Price × (1 − Discount) + Delivery Fee and compared it with the recorded revenue. |
+| #  | Issue Found                                                                                                     | Why It Was a Problem                                                              | How It Was Handled                                                                                                                    |
+| -- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | Inconsistent or misspelled categories such as `totoya`, `toyta`, `Mercedes Benz`, `cental`, `nrb`, and `harier` | The same category could appear as different values, affecting totals and charts.  | Created mapping tables to standardize known variations into one consistent label.                                                     |
+| 2  | Multiple currencies such as KES, KSh, USD, EUR, ZAR, and R                                                      | Different currencies could not be safely added together.                          | Detected the currency and converted all monetary values to KES using consistent exchange rates.                                       |
+| 3  | Monetary values ending in `M`                                                                                   | Values such as `5M` could be interpreted as 5 instead of 5,000,000.               | Detected `M` and converted the value to millions before currency conversion.                                                          |
+| 4  | Missing-value and error placeholders such as `N/A`, `NULL`, `TBD`, `-`, and `#VALUE!`                           | These values could cause errors or affect calculations.                           | Converted recognized placeholders to true null values before changing data types.                                                     |
+| 5  | Inconsistent date formats and Excel serial dates                                                                | Incorrect dates could place transactions in the wrong time period.                | Converted different date formats and Excel serial dates into a consistent date format.                                                |
+| 6  | Inconsistent Order ID formats                                                                                   | Different formats could make it difficult to identify or remove duplicates.       | Standardized Order IDs while preserving their original prefixes and numeric parts.                                                    |
+| 7  | Units Sold recorded as words such as `one`, `two`, and `three`                                                  | Text values could not be included correctly in calculations.                      | Converted number words into numeric values.                                                                                           |
+| 8  | Discounts recorded as words, decimals, and percentages                                                          | Mixed formats could produce incorrect calculations.                               | Converted all valid discounts into decimal values. Values above 50% were treated as invalid.                                          |
+| 9  | Customer Ratings recorded as `excellent`, `4/5`, and `3 out of 5`                                               | Different formats made it difficult to calculate average ratings.                 | Standardized ratings to a 0–5 numeric scale. Invalid values were removed.                                                             |
+| 10 | Review Count recorded partly as words                                                                           | Text values could not be used correctly in calculations.                          | Converted number words into numeric values.                                                                                           |
+| 11 | Customer Age below 18 or above 100                                                                              | These values were considered implausible and likely to be data-entry errors.      | Invalid ages were converted to null and handled using a documented default.                                                           |
+| 12 | Sales Rep names containing typing errors                                                                        | The same sales representative could appear as different people.                   | Corrected the known character error before matching names.                                                                            |
+| 13 | Zero Logistics Cost for Delivered orders                                                                        | A completed delivery with zero logistics cost could understate delivery expenses. | Flagged these values as suspicious and converted them to null.                                                                        |
+| 14 | Zero Revenue for active, non-cancelled orders                                                                   | This could incorrectly reduce reported revenue.                                   | Flagged suspicious values and recalculated revenue independently.                                                                     |
+| 15 | Duplicate Lead Source spellings such as `Face Book` and `Facebook`                                              | The same marketing channel could appear as two separate categories.               | Standardized the variations into one canonical label.                                                                                 |
+| 16 | Recorded Revenue could not be fully verified                                                                    | The original revenue field could contain unreliable values.                       | Recalculated revenue using Units Sold × Unit Selling Price × (1 − Discount) + Delivery Fee and compared it with the recorded revenue. |
 
 ## 4. Currency Standardization
 
-### All monetary values are reported in Kenya Shillings (KES). Where a value did not explicitly state a currency, it was assumed to be KES. Where another currency was explicitly indicated, it was converted using one fixed rate applied consistently throughout the project:
+All monetary values are reported in Kenya Shillings (KES). Where a value did not explicitly state a currency, it was assumed to be KES. Where another currency was explicitly indicated, it was converted using one fixed rate applied consistently throughout the project:
 
 | Currency detected  | Marker(s) matched                    | Rate to KES applied |
 | ------------------ | ------------------------------------ | ------------------: |
@@ -58,11 +58,11 @@ This repository documents that end-to-end journey:
 | Euro               | "EUR"                                |              147.84 |
 | South African Rand | "ZAR", or values prefixed "R "       |                7.93 |
 
-### Currency conversion is applied before the "M" (millions) shorthand adjustment and before any downstream calculation, so Revenue, Unit Selling Price, Unit Cost and Logistics Cost are all expressed on a common KES basis before they are combined.
+Currency conversion is applied before the "M" (millions) shorthand adjustment and before any downstream calculation, so Revenue, Unit Selling Price, Unit Cost and Logistics Cost are all expressed on a common KES basis before they are combined.
 
 ## 5. Data Cleaning & Preparation (Power Query)
 
-### All cleaning lives in the Jcars_data-CLEANED query, built from reusable custom functions rather than one-off manual steps, so the logic is transparent and repeatable:
+All cleaning lives in the `Jcars_data-CLEANED` query. It was built using reusable custom functions rather than one-off manual steps, making the process easier to follow, audit and repeat:
 
 * **fnCat** — normalizes free text against a mapping table (case/space/punctuation-insensitive key match); unmapped-but-recognizable text is title-cased rather than discarded and recognized "empty" tokens become "Unknown".
 * **fnDate** — parses Order Date / Delivery Date, handling Excel serial numbers and both en-GB/en-US text formats.
@@ -75,7 +75,7 @@ This repository documents that end-to-end journey:
 ### Checks performed on the analysis-ready data before modelling:
 
 * **Type check:** dates typed as date, monetary fields typed as Currency, so no numeric field is silently treated as text.
-* **Row-count check:** row count in Jcars_data-CLEANED matches Jcars_data-ORIGINAL; no records were dropped during cleaning.
+* **Row-count check:** row count in `Jcars_data-CLEANED` matches `Jcars_data-ORIGINAL`; no records were dropped during cleaning.
 * **Crossfield business-rule check:** Logistics Cost = 0 on "Delivered" orders, and Revenue Recorded = 0 on non-Cancelled/non-Refunded orders, were both checked against the business logic and treated as suspicious.
 * **Recalculation vs recorded value:** the raw "Revenue Recorded" field was compared against an independently rebuilt Revenue measure (Units Sold × Price × (1 − Discount) + Delivery Fee); the rebuilt figure is the one used throughout the model, with the discrepancy documented rather than silently overwritten.
 * **Category coverage check:** every categorical mapping table was built directly from the distinct raw values present in the file, so no known variant is left unmapped.
@@ -84,24 +84,9 @@ This repository documents that end-to-end journey:
 
 ### The raw flat file was restructured into a star schema:
 
-```text
-                DIM-CUSTOMER (Customer Type, CUST KEY)
-                      │
-DIM-LEAD SOURCE ──┐   │
- (Lead Source,    │   │
-  Index)          │   │
-                  ▼   ▼
-              FACT TABLE 2 ◄── DIM-VEHICLE (Car Make, Car Model, Vehicle Type,
-        (order-line grain:                    Vehicle Year, Fuel Type,
-     dates, region/county/city/branch,         Transmission, Colour, Index)
-   units, price, cost, discount, fees,
-  payment, delivery, rating, returned,   ◄── DIM-SALES REP (Sales Rep, Index)
-   Revenue, Cost of Goods Sold, etc.)
-```
-
-* **Fact table:** FACT TABLE 2 — one row per order line, built from a staging query (REFERENCE, sourced from Jcars_data-CLEANED) merged against each dimension to attach surrogate keys, with the descriptive dimension attributes removed from the fact table afterwards to avoid duplication.
-* **Dimensions:** DIM-CUSTOMER (by Customer Type), DIM-VEHICLE (by the full vehicle attribute combination Make/Model/Type/Year/Fuel/Transmission/Colour), DIM-SALES REP, DIM-LEAD SOURCE. Each dimension is built with Table.Distinct + a surrogate index key.
-* **Relationships:** all four are many-to-one from FACT TABLE 2 to the dimension, with bidirectional cross-filtering enabled so slicers on either side filter the other.
+* **Fact table:** `FACT TABLE 2` — one row per order line, built from a staging query (`REFERENCE`, sourced from `Jcars_data-CLEANED`) merged against each dimension to attach surrogate keys. The descriptive dimension attributes were then removed from the fact table to avoid duplication.
+* **Dimensions:** `DIM-CUSTOMER` (by Customer Type), `DIM-VEHICLE` (by the full vehicle attribute combination Make/Model/Type/Year/Fuel/Transmission/Colour), `DIM-SALES REP`, `DIM-LEAD SOURCE`. Each dimension is built with `Table.Distinct` + a surrogate index key.
+* **Relationships:** all four are many-to-one from `FACT TABLE 2` to the dimension, with bidirectional cross-filtering enabled so slicers on either side filter the other.
 * **Date intelligence:** Power BI's auto date/time tables support the Order Date and Delivery Date hierarchies (year/quarter/month/day) used in the trend visuals.
 
 ## 8. DAX Measures & Calculated Columns
@@ -155,7 +140,7 @@ This is a deeper investigation page, carrying the KPI cards forward plus: a tree
 * Customer Rating is normalized to a 0–5 scale; values outside that range are treated as invalid.
 * Customer Age outside 18–100 is treated as invalid.
 * Logistics Cost of 0 on a "Delivered" order, and Revenue Recorded of 0 on a non-cancelled/non-refunded order, are both treated as suspicious rather than genuine zeros.
-* Where a genuinely missing value could not be corrected, it was retained and flagged (via Data Quality Flag) rather than deleted; for measures that must still aggregate, the following documented defaults are used: Customer Age → 35, Vehicle Year → 2022, Units Sold → 1, Discount → 0, Customer Rating → 3, Review Count → 0, Delivery Fee → 0, Logistics Cost → 0, Order ID → "UNKNOWN", missing Unit Selling Price/Unit Cost → 0 (and separately flagged as estimated).
+* Where a genuinely missing value could not be corrected, it was retained and flagged (via Data Quality Flag) rather than deleted. For measures that must still aggregate, the following documented defaults are used: Customer Age → 35, Vehicle Year → 2022, Units Sold → 1, Discount → 0, Customer Rating → 3, Review Count → 0, Delivery Fee → 0, Logistics Cost → 0, Order ID → "UNKNOWN", missing Unit Selling Price/Unit Cost → 0 (and separately flagged as estimated).
 
 ## 11. Key Business Metrics (from the analysis-ready data)
 
@@ -264,8 +249,8 @@ JCARS PROJECT FOLDER
 
 ## 18. Challenges & Learnings
 
-The single biggest challenge in this dataset was that almost every column had its own distinct failure mode: categorical typos, mixed currencies, mixed units of measure ("M" for millions), numbers written as words, and business-rule violations (zero logistics cost on delivered orders), so a single generic cleaning pass would not have caught most of it.
+The biggest challenge with this dataset was that almost every column had its own type of data issue: categorical typos, mixed currencies, different units of measure ("M" for millions), numbers written as words, and business-rule issues such as zero logistics cost on delivered orders. Because of this, a single generic cleaning pass would not have caught everything.
 
-Building small, reusable, purpose-built functions per problem type (fnCat, fnDate, fnMoneyKES, etc.) rather than one-off manual fixes made the cleaning transparent, auditable, and easy to re-run if the raw export is refreshed.
+Building small, reusable functions for each problem type (`fnCat`, `fnDate`, `fnMoneyKES`, etc.) instead of relying on one-off manual fixes made the cleaning process easier to follow, audit and rerun if the raw export is refreshed.
 
-The clearest lesson: a "Revenue" or "Cost" field recorded directly in a raw export should never be trusted at face value without being cross-checked against an independently rebuilt calculation; in this dataset, that check is what surfaced the zero-revenue and zero-logistics-cost anomalies used above.
+The clearest lesson from the project was that a "Revenue" or "Cost" field from a raw export should not simply be trusted without checking it against an independently rebuilt calculation. In this dataset, that check helped identify the zero-revenue and zero-logistics-cost anomalies discussed above.

@@ -2,49 +2,52 @@
 
 ## 1. Project Background & Objective
 
-###JCars Logistics imports, sells and delivers vehicles to customers across Kenya. Management supplied a single raw, uncleaned transactional export (Jcars_data.csv) covering sales, customers, vehicles, branches, sales representatives, payments, deliveries, logistics costs, returns, cancellations and customer experience and asked for a reliable, interactive Power BI solution that turns that data into management decision support: understanding sales and revenue performance, cost and profitability, vehicle and branch performance, sales channels, payments, logistics, returns and unusual transactions that deserve further investigation.
+JCars Logistics imports, sells and delivers vehicles to customers across Kenya. Management supplied a single raw, uncleaned transactional export (Jcars_data.csv) covering sales, customers, vehicles, branches, sales representatives, payments, deliveries, logistics costs, returns, cancellations and customer experience and asked for a reliable, interactive Power BI solution that turns that data into management decision support: understanding sales and revenue performance, cost and profitability, vehicle and branch performance, sales channels, payments, logistics, returns and unusual transactions that deserve further investigation.
 
-###This repository documents that end-to-end journey:
-###1.  Data quality audit.
-###2.  Currency standardization.
-###3.  Power Query cleaning.
-###4.  Data modelling.
-###5.  DAX.
-###6.  Dashboard and report design.
-###7.  Investigation and recommendations.
+This repository documents that end-to-end journey:
+1.  Data quality audit.
+2.  Currency standardization.
+3.  Power Query cleaning.
+4.  Data modelling.
+5.  DAX.
+6.  Dashboard and report design.
+7.  Investigation and recommendations.
 
 ## 2. Dataset & Grain
 
-●	Source file: Jcars_data.csv is a single flat table with 32 columns.
-●	Grain: one row contains one vehicle sales order line, a single order for one or more units of one vehicle 
-●	configuration, sold by one sales rep, to one customer, through one branch.
-●	Row count: 276 order lines, representing 466 total units sold.
-●	Date coverage: Order Date spans 1 Jan 2025 – 1 Dec 2026.
-●	Business entities represented in the columns: customer (name, type, age), location (region, county, city), branch, sales rep, lead source/channel, vehicle (make, model, type, year, fuel, transmission, color), transaction economics (units, price, cost, discount, delivery fee, revenue recorded), payment (method, status), logistics (delivery status, delivery date, logistics cost), and customer experience (rating, review count, returned flag).
+●	 Source file: Jcars_data.csv is a single flat table with 32 columns.
+●	 Grain: one row contains one vehicle sales order line, a single order for one or more units of one vehicle 
+●	  configuration, sold by one sales rep, to one customer, through one branch.
+●	 Row count: 276 order lines, representing 466 total units sold.
+●	 Date coverage: Order Date spans 1 Jan 2025 – 1 Dec 2026.
+●	 Business entities represented in the columns: customer (name, type, age), location (region, county, city), branch, sales rep, lead source/channel, vehicle (make, model, type, year, fuel, transmission, color), transaction economics (units, price, cost, discount, delivery fee, revenue recorded), payment (method, status), logistics (delivery status, delivery date, logistics cost), and customer experience (rating, review count, returned flag).
 
 ## 3. Data Quality Audit
+                                          
 ### Below are the significant issues identified, why each mattered, and how each was resolved in Power Query.
 	 
 
-	Issue Found	Why It's a Problem	How It Was Handled
-	
-1	Inconsistent/misspelled categorical text across 15 fields (Region, County, City, Branch, Car Make, Car Model, Fuel Type, Transmission, Color, Payment Method, Payment Status, Delivery Status, Customer Type, Lead Source, Returned e.g. "totoya", "toyta", "Mercedes Benz", "cental", "nrb", "mtkenya", "harier"	Splits one real-world category into many, silently understating totals in every chart grouped by that field	Built explicit lookup/mapping tables per field so every known variant is normalized to one canonical label; anything unrecognized falls back to a cleaned proper-case value instead of being dropped
-2	Mixed currencies in monetary fields (unmarked values, KES/KSh, $/USD, EUR, ZAR/R)	Summing mixed currencies as if they were all KES massively distorts revenue, cost and profit	Currency detected from the raw text and converted to KES using one fixed rate per currency, applied consistently.
-3	Shorthand monetary values ending in "M" (e.g. values meant to read as millions)	Read literally, these numbers are ~1,000,000× too small	Detected the trailing "M" and multiplied by 1,000,000 before currency conversion
-4	Placeholder / error tokens standing in for missing values ("", "N/A", "NULL", "TBD", "-", "#VALUE!", "#ERROR", "#DATE!") scattered across text, numeric and date fields	If left as text, these values break numeric aggregation or get counted.	Explicitly recognized and converted to true nulls before typing.
-5	Inconsistent date formats and Excel serial date numbers in Order Date / Delivery Date	Silent misanalyses’ shift orders into the wrong period, corrupting every trend visual	Custom analysis tries serial-number conversion first (values in the 30000–60000 range), then en-GB, then en-US text formats, before falling back to null
-6	Inconsistent Order ID formats (ORD, LCL, CAR, LC prefixes mixed with stray characters)	Breaks any attempt to use Order ID as a clean identifier or to de-duplicate	Prefix detected and preserved, non-alphanumeric noise stripped, standardised to PREFIX + digits
-7	Units Sold recorded as words ("one", "two", "three") instead of numbers in some rows	Text values are excluded from SUM() and silently understate volume	Word-to-number mapping applied before numeric typing
-8	Discount recorded in mixed formats (words like "fifteen", "ten percent", decimals, percentages) and some implausible values above 50%	Mixed formats break numeric math; a discount above 50% on a vehicle sale is not credible and likely a data-entry error	Analysed to a decimal fraction; values above 50% treated as invalid and excluded rather than trusted
-9	Customer Rating recorded in mixed formats ("excellent", "4/5", "3 out of 5") and out-of-range values	Inconsistent scales cannot be averaged meaningfully	Normalized to a 0–5 numeric scale; anything outside 0–5 treated as invalid
-10	Review Count partly recorded as words (e.g. "ten")	Same issue as Units Sold  breaks SUM()/AVERAGE()	Word-to-number conversion applied
-11	Customer Age outside a plausible adult range (below 18 or above 100)	Data-entry errors	Treated as invalid (nulled), then given a documented default
-12	Sales Rep names containing a systematic typo pattern (a digit "1" in place of the letter "i", e.g. names rendering incorrectly)	Splits one sales rep into two identities, corrupting rep-level performance analysis	Character substitution applied before matching against the known rep list
-13	Zero-value Logistics Cost on orders marked "Delivered"	A completed delivery with zero recorded logistics cost is not credible and would understate true delivery cost	Flagged as suspicious and nulled rather than treated as a true zero, so it doesn't silently deflate logistics-cost analysis
-14	Zero Revenue Recorded on orders that were neither Cancelled nor Refunded	A live, non-cancelled order showing zero revenue is inconsistent with the business logic and would distort revenue reporting if trusted	Flagged as suspicious and nulled; Revenue is independently recalculated rather than relying on this field
-15	Duplicate category spellings for the same lead source (e.g. "Face Book" vs "Facebook")	Splits one channel into two in every lead-source chart	Explicit text replacement to merge the variant into the canonical label
-16	Recorded "Revenue" not independently verifiable	The raw file's revenue-style field could not be trusted at face value given Issue 14	A transaction-level Revenue measure was rebuilt independently as Units Sold × Unit Selling Price × (1 − Discount) + Delivery Fee, and validated against the (cleaned) recorded figure rather than assumed correct — see Data Validation
 
+## Data Cleaning Issues and How They Were Handled
+
+| # | Issue Found | Why It Was a Problem | How It Was Handled |
+|---|---|---|---|
+| 1 | Inconsistent or misspelled categories such as `totoya`, `toyta`, `Mercedes Benz`, `cental`, `nrb`, and `harier` | The same category could appear as different values, affecting totals and charts. | Created mapping tables to standardize known variations into one consistent label. |
+| 2 | Multiple currencies such as KES, KSh, USD, EUR, ZAR, and R | Different currencies could not be safely added together. | Detected the currency and converted all monetary values to KES using consistent exchange rates. |
+| 3 | Monetary values ending in `M` | Values such as `5M` could be interpreted as 5 instead of 5,000,000. | Detected `M` and converted the value to millions before currency conversion. |
+| 4 | Missing-value and error placeholders such as `N/A`, `NULL`, `TBD`, `-`, and `#VALUE!` | These values could cause errors or affect calculations. | Converted recognized placeholders to true null values before changing data types. |
+| 5 | Inconsistent date formats and Excel serial dates | Incorrect dates could place transactions in the wrong time period. | Converted different date formats and Excel serial dates into a consistent date format. |
+| 6 | Inconsistent Order ID formats | Different formats could make it difficult to identify or remove duplicates. | Standardized Order IDs while preserving their original prefixes and numeric parts. |
+| 7 | Units Sold recorded as words such as `one`, `two`, and `three` | Text values could not be included correctly in calculations. | Converted number words into numeric values. |
+| 8 | Discounts recorded as words, decimals, and percentages | Mixed formats could produce incorrect calculations. | Converted all valid discounts into decimal values. Values above 50% were treated as invalid. |
+| 9 | Customer Ratings recorded as `excellent`, `4/5`, and `3 out of 5` | Different formats made it difficult to calculate average ratings. | Standardized ratings to a 0–5 numeric scale. Invalid values were removed. |
+| 10 | Review Count recorded partly as words | Text values could not be used correctly in calculations. | Converted number words into numeric values. |
+| 11 | Customer Age below 18 or above 100 | These values were considered implausible and likely to be data-entry errors. | Invalid ages were converted to null and handled using a documented default. |
+| 12 | Sales Rep names containing typing errors | The same sales representative could appear as different people. | Corrected the known character error before matching names. |
+| 13 | Zero Logistics Cost for Delivered orders | A completed delivery with zero logistics cost could understate delivery expenses. | Flagged these values as suspicious and converted them to null. |
+| 14 | Zero Revenue for active, non-cancelled orders | This could incorrectly reduce reported revenue. | Flagged suspicious values and recalculated revenue independently. |
+| 15 | Duplicate Lead Source spellings such as `Face Book` and `Facebook` | The same marketing channel could appear as two separate categories. | Standardized the variations into one canonical label. |
+| 16 | Recorded Revenue could not be fully verified | The original revenue field could contain unreliable values. | Recalculated revenue using Units Sold × Unit Selling Price × (1 − Discount) + Delivery Fee and compared it with the recorded revenue. |
 
 ## 4.Currency Standardization
 

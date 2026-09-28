@@ -24,7 +24,7 @@ This repository documents the full process:
 
 ## 3. Data Quality Audit
 
-### Below are the significant issues identified, why each mattered, and how each was handled in Power Query.
+Below are the significant issues identified, why each mattered, and how each was handled in Power Query.
 
 ## Data Cleaning Issues and How They Were Handled
 
@@ -120,9 +120,8 @@ A single-page overview built around four headline KPI cards (Total Units Sold, T
 * Gross Profit, Revenue and order count by quarter (Delivery Date)
 * A Vehicle Type slicer that cross-filters the whole page
 
-### 2. Detailed Analysis (MESSY BLUEPRINT)
-
-This is a deeper investigation page, carrying the KPI cards forward plus: a treemap of Units Sold by Car Model, pivot tables (Gross Profit/Revenue/Units/COGS by Vehicle Type; Returned status by Vehicle Type), a map of Gross Profit by Branch, Gross Profit by Region (funnel), Units Sold by Sales Rep, Gross Profit share by Lead Source, Gross Profit/Revenue/orders by quarter, Payment Method share (donut), Payment Status by Units and Revenue (combo), Delivery Status by Units, Customer Type trend, a Logistics Cost / Gross Profit table by Vehicle Type and Year, a KPI visual, a navigation button and a Vehicle Type slicer.
+### 2. Detailed Analysis (DRILL THROUGH PAGE)
+This is a deeper investigation page, carrying the KPI cards forward plus: a tree map of Units Sold by Car Model, pivot tables (Gross Profit/Revenue/Units/COGS by Vehicle Type; Returned status by Vehicle Type), a map of Gross Profit by Branch, Gross Profit by Region (funnel), Units Sold by Sales Rep, Gross Profit share by Lead Source, Gross Profit/Revenue/orders by quarter, Payment Method share (donut), Payment Status by Units and Revenue (combo), Delivery Status by Units, Customer Type trend, a Logistics Cost / Gross Profit table by Vehicle Type and Year, a KPI visual, a navigation button and a Vehicle Type slicer. It also contains drill throughs with the category city, county, fuel type, returned status.
 
 ### Interactivity implemented
 

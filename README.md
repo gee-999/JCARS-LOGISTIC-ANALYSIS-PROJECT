@@ -1,34 +1,33 @@
-#JCars Logistics Analysis
-##1. Project Background & Objective
+# JCars Logistics Analysis
+
+## 1. Project Background & Objective
+
 ###JCars Logistics imports, sells and delivers vehicles to customers across Kenya. Management supplied a single raw, uncleaned transactional export (Jcars_data.csv) covering sales, customers, vehicles, branches, sales representatives, payments, deliveries, logistics costs, returns, cancellations and customer experience and asked for a reliable, interactive Power BI solution that turns that data into management decision support: understanding sales and revenue performance, cost and profitability, vehicle and branch performance, sales channels, payments, logistics, returns and unusual transactions that deserve further investigation.
+
 ###This repository documents that end-to-end journey:
-### 1.  Data quality audit.
-### 2.  Currency standardization.
-### 3.  Power Query cleaning.
-### 4.  Data modelling.
-### 5.  DAX.
-### 6.  Dashboard and report design.
-### 7.  Investigation and recommendations.
-## 2.   Dataset & Grain
+###1.  Data quality audit.
+###2.  Currency standardization.
+###3.  Power Query cleaning.
+###4.  Data modelling.
+###5.  DAX.
+###6.  Dashboard and report design.
+###7.  Investigation and recommendations.
+
+## 2. Dataset & Grain
+
 ●	Source file: Jcars_data.csv is a single flat table with 32 columns.
-
 ●	Grain: one row contains one vehicle sales order line, a single order for one or more units of one vehicle 
-
 ●	configuration, sold by one sales rep, to one customer, through one branch.
-
 ●	Row count: 276 order lines, representing 466 total units sold.
-
 ●	Date coverage: Order Date spans 1 Jan 2025 – 1 Dec 2026.
-
 ●	Business entities represented in the columns: customer (name, type, age), location (region, county, city), branch, sales rep, lead source/channel, vehicle (make, model, type, year, fuel, transmission, color), transaction economics (units, price, cost, discount, delivery fee, revenue recorded), payment (method, status), logistics (delivery status, delivery date, logistics cost), and customer experience (rating, review count, returned flag).
 
 ## 3. Data Quality Audit
 ### Below are the significant issues identified, why each mattered, and how each was resolved in Power Query.
-
-
-```
+	 
 
 	Issue Found	Why It's a Problem	How It Was Handled
+	
 1	Inconsistent/misspelled categorical text across 15 fields (Region, County, City, Branch, Car Make, Car Model, Fuel Type, Transmission, Color, Payment Method, Payment Status, Delivery Status, Customer Type, Lead Source, Returned e.g. "totoya", "toyta", "Mercedes Benz", "cental", "nrb", "mtkenya", "harier"	Splits one real-world category into many, silently understating totals in every chart grouped by that field	Built explicit lookup/mapping tables per field so every known variant is normalized to one canonical label; anything unrecognized falls back to a cleaned proper-case value instead of being dropped
 2	Mixed currencies in monetary fields (unmarked values, KES/KSh, $/USD, EUR, ZAR/R)	Summing mixed currencies as if they were all KES massively distorts revenue, cost and profit	Currency detected from the raw text and converted to KES using one fixed rate per currency, applied consistently.
 3	Shorthand monetary values ending in "M" (e.g. values meant to read as millions)	Read literally, these numbers are ~1,000,000× too small	Detected the trailing "M" and multiplied by 1,000,000 before currency conversion
@@ -46,9 +45,9 @@
 15	Duplicate category spellings for the same lead source (e.g. "Face Book" vs "Facebook")	Splits one channel into two in every lead-source chart	Explicit text replacement to merge the variant into the canonical label
 16	Recorded "Revenue" not independently verifiable	The raw file's revenue-style field could not be trusted at face value given Issue 14	A transaction-level Revenue measure was rebuilt independently as Units Sold × Unit Selling Price × (1 − Discount) + Delivery Fee, and validated against the (cleaned) recorded figure rather than assumed correct — see Data Validation
 
-```
-###Every row that could not be corrected with confidence was retained, not deleted, and stamped with a `Data Quality Flag` column recording exactly what was uncertain about it (missing Order Date, missing Delivery Date, estimated Price, estimated Cost). 76 of 276 rows (27.5%) carry at least one flag.
-## 4. Currency Standardization
+
+## 4.Currency Standardization
+
 ###All monetary values are reported in Kenya Shillings (KES). Where a value did not explicitly state a currency, it was assumed to be KES. Where another currency was explicitly indicated, it was converted using one fixed rate applied consistently throughout the project:
 ```
 Currency detected	Marker(s) matched	Rate to KES applied
